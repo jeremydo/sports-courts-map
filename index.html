@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sports Courts Map — Potential Pickleball Sites</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1a1a2e; color: #eee; }
+    #header {
+      padding: 14px 20px;
+      background: #16213e;
+      border-bottom: 2px solid #0f3460;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    #header h1 { font-size: 1.1rem; font-weight: 600; color: #e2e8f0; }
+    #header p { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+    #radius-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+    #radius-control input[type=range] {
+      -webkit-appearance: none;
+      width: 140px;
+      height: 4px;
+      border-radius: 2px;
+      background: #334155;
+      outline: none;
+      cursor: pointer;
+    }
+    #radius-control input[type=range]::-webkit-slider-thumb,
+    #circle-control input[type=range]::-webkit-slider-thumb,
+    #size-control input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #93c5fd;
+      cursor: pointer;
+    }
+    #radius-value {
+      min-width: 48px;
+      color: #93c5fd;
+      font-weight: 600;
+    }
+    #legend {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      flex-shrink: 0;
+    }
+    #status {
+      padding: 8px 20px;
+      font-size: 0.78rem;
+      background: #0f3460;
+      color: #93c5fd;
+      min-height: 30px;
+    }
+    #map { height: calc(100vh - 100px); width: 100%; }
+    .leaflet-popup-content-wrapper {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 8px;
+    }
+    .leaflet-popup-tip { background: #1e293b; }
+    .leaflet-popup-content { margin: 10px 14px; font-size: 0.82rem; line-height: 1.6; min-width: 200px; }
+    .leaflet-popup-content strong { color: #93c5fd; display: block; margin-bottom: 4px; }
+    .popup-type { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; margin-bottom: 6px; }
+    .popup-detail { color: #94a3b8; font-size: 0.75rem; }
+    .popup-address { color: #e2e8f0; font-size: 0.8rem; margin-top: 4px; }
+    .popup-address-loading { color: #64748b; font-size: 0.75rem; font-style: italic; margin-top: 4px; }
+    #sat-control {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.78rem; color: #cbd5e1; white-space: nowrap;
+      padding: 5px 10px; background: #0f3460; border-radius: 6px;
+      cursor: pointer; user-select: none;
+    }
+    #sat-control input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; accent-color: #93c5fd; }
+    #sat-control.active { background: #1e40af; color: #bfdbfe; }
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <h1 id="page-title">Sports Courts Map — Potential Pickleball Sites</h1>
+    <p id="subtitle"></p>
+  </div>
+  <div id="radius-control">
+    <label for="radius-slider">Search radius:</label>
+    <input type="range" id="radius-slider" min="1" max="15" value="5" step="1">
+    <span id="radius-value">5 miles</span>
+  </div>
+  <div id="circle-control" style="display:flex;align-items:center;gap:10px;font-size:0.78rem;color:#cbd5e1;white-space:nowrap">
+    <label for="circle-slider">Impact radius:</label>
+    <input type="range" id="circle-slider" min="200" max="1000" value="1000" step="200" style="-webkit-appearance:none;width:140px;height:4px;border-radius:2px;background:#334155;outline:none;cursor:pointer">
+    <span id="circle-value" style="min-width:56px;color:#93c5fd;font-weight:600">1,000 ft</span>
+  </div>
+  <div id="size-control" style="display:flex;align-items:center;gap:10px;font-size:0.78rem;color:#cbd5e1;white-space:nowrap">
+    <label for="size-slider">Min court size:</label>
+    <input type="range" id="size-slider" min="1000" max="5000" value="1000" step="250" style="-webkit-appearance:none;width:140px;height:4px;border-radius:2px;background:#334155;outline:none;cursor:pointer">
+    <span id="size-value" style="min-width:72px;color:#93c5fd;font-weight:600">All sizes</span>
+  </div>
+  <label id="sat-control" title="Shows satellite imagery blended within the impact circle of the selected court">
+    <input type="checkbox" id="sat-toggle"> Satellite overlay
+  </label>
+  <div id="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div> Tennis</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Basketball</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Pickleball</div>
+<div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> Other / Multi-sport</div>
+    <div class="legend-item" style="margin-left:8px;padding-left:8px;border-left:1px solid #334155">
+      <div style="width:14px;height:14px;border-radius:50%;border:1.5px dashed #94a3b8;flex-shrink:0"></div>
+      <span id="legend-circle-label">1,000 ft radius</span>
+    </div>
+  </div>
+</div>
+
+<div id="status">Loading court data from <a href="https://www.openstreetmap.org/welcome" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:none">OpenStreetMap</a>...</div>
+<div id="map"></div>
+
+<script>
+  // ── CONFIGURATION — edit these three values to use this tool for any location ──
+  const CONFIG = {
+    lat:          37.2358,      // Center latitude  (decimal degrees)
+    lng:         -121.9624,     // Center longitude (decimal degrees, negative = West)
+    locationName: 'Los Gatos',  // City / area name used in titles and status messages
+    defaultSearchMiles: 5,      // Starting search radius shown on page load (1–15)
+  };
+  // ──────────────────────────────────────────────────────────────────────────────
+
+  const CENTER = [CONFIG.lat, CONFIG.lng];
+  const MILES_TO_METERS = 1609.344;
+
+  // Apply config to title/subtitle/slider on load
+  document.title = `${CONFIG.locationName} Sports Courts — Potential Pickleball Sites`;
+  document.getElementById('page-title').textContent = `${CONFIG.locationName} Sports Courts — Potential Pickleball Sites`;
+  const _initMiles = CONFIG.defaultSearchMiles;
+  document.getElementById('radius-slider').value = _initMiles;
+  document.getElementById('radius-value').textContent = _initMiles === 1 ? '1 mile' : `${_initMiles} miles`;
+
+  const map = L.map('map', { center: CENTER, zoom: 13 });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map);
+
+  const boundaryCircle = L.circle(CENTER, {
+    radius: CONFIG.defaultSearchMiles * MILES_TO_METERS,
+    color: '#0f3460',
+    fillColor: '#0f3460',
+    fillOpacity: 0.04,
+    weight: 1.5,
+    dashArray: '6 4'
+  }).addTo(map);
+
+  // Custom panes — dim OSM → satellite → circles → courts
+  map.createPane('dimPane');
+  map.createPane('satellitePane');
+  map.createPane('circlePane');
+  map.createPane('courtPane');
+  map.getPane('dimPane').style.zIndex       = 260;
+  map.getPane('satellitePane').style.zIndex = 280;
+  map.getPane('circlePane').style.zIndex    = 350;
+  map.getPane('courtPane').style.zIndex     = 450;
+  map.getPane('dimPane').style.pointerEvents = 'none';
+
+  const satLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { pane: 'satellitePane', opacity: 0.75, attribution: 'Imagery &copy; Esri', maxZoom: 19 }
+  );
+
+  let selectedCourt = null; // { lat, lon }
+
+  function updateSatClip() {
+    const satPane = map.getPane('satellitePane');
+    const dimPane = map.getPane('dimPane');
+    if (!selectedCourt || !map.hasLayer(satLayer)) {
+      satPane.style.clipPath = 'circle(0px at 0px 0px)';
+      dimPane.style.clipPath = 'circle(0px at 0px 0px)';
+      dimPane.style.background = '';
+      return;
+    }
+    const { lat, lon } = selectedCourt;
+    // clip-path coords must be in the pane's local space (child of .leaflet-map-pane),
+    // not container space — subtract the map pane's translate offset to correct for
+    // smooth-pan transforms that Leaflet applies to .leaflet-map-pane
+    const mapPanePos = L.DomUtil.getPosition(map.getPanes().mapPane);
+    const center     = map.latLngToContainerPoint([lat, lon]);
+    const clipX      = center.x - mapPanePos.x;
+    const clipY      = center.y - mapPanePos.y;
+    const radiusM    = circleRadiusFt * FEET_TO_METERS;
+    const zoom       = map.getZoom();
+    const mPerPx     = 40075016.686 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom + 8);
+    const radiusPx   = radiusM / mPerPx;
+    const clip = `circle(${radiusPx}px at ${clipX}px ${clipY}px)`;
+    satPane.style.clipPath = clip;
+    dimPane.style.clipPath = clip;
+    dimPane.style.background = 'rgba(240,240,230,0.52)';
+  }
+
+  map.on('move zoom moveend zoomend', updateSatClip);
+
+  const satToggle  = document.getElementById('sat-toggle');
+  const satControl = document.getElementById('sat-control');
+  satToggle.addEventListener('change', () => {
+    if (satToggle.checked) {
+      satLayer.addTo(map);
+      satControl.classList.add('active');
+    } else {
+      map.removeLayer(satLayer);
+      satControl.classList.remove('active');
+    }
+    updateSatClip();
+  });
+
+  const courtLayer = L.layerGroup().addTo(map);
+
+  const COLORS = {
+    pickleball:  '#10b981',
+    tennis:      '#06b6d4',
+    basketball:  '#3b82f6',
+    other:       '#a855f7'
+  };
+
+  function getSportType(tags) {
+    const sport = (tags.sport || '').toLowerCase();
+    const name  = (tags.name  || '').toLowerCase();
+    if (sport.includes('pickleball') || name.includes('pickleball')) return 'pickleball';
+    if (sport.includes('tennis')     || name.includes('tennis'))     return 'tennis';
+    if (sport.includes('basketball') || name.includes('basketball')) return 'basketball';
+    if (sport.includes('baseball') || sport.includes('softball') ||
+        name.includes('baseball')  || name.includes('softball'))     return 'exclude';
+    if (sport.includes('soccer') || sport.includes('football') || name.includes('soccer')) return 'exclude';
+    if (sport.includes('boules') || sport.includes('petanque') || name.includes('boules')) return 'exclude';
+    if (sport.includes('equestrian') || sport.includes('horse') || name.includes('equestrian') || name.includes('horse')) return 'exclude';
+    return 'other';
+  }
+
+  function typeLabel(type) {
+    return type.charAt(0).toUpperCase() + type.slice(1) + ' court';
+  }
+
+  function makeIcon(type) {
+    const color = COLORS[type] || COLORS.other;
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        width:22px;height:22px;border-radius:50%;
+        background:${color};border:3px solid #fff;
+        box-shadow:0 0 0 2px ${color}, 0 2px 6px rgba(0,0,0,0.5);
+      "></div>`,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+  }
+
+  function makePolygonStyle(type) {
+    const color = COLORS[type] || COLORS.other;
+    return { color: '#fff', fillColor: color, fillOpacity: 0.75, weight: 2.5, pane: 'courtPane' };
+  }
+
+  const FEET_TO_METERS = 0.3048;
+  let circleRadiusFt = 1000;
+  let minCourtSizeFt = 1000;
+  const allRadiusCircles = [];
+  // { layer, circle, areaSqFt } — used for size filtering
+  const allCourts = [];
+
+  function addRadiusCircle(lat, lon, type) {
+    const color = COLORS[type] || COLORS.other;
+    const circle = L.circle([lat, lon], {
+      radius: circleRadiusFt * FEET_TO_METERS,
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.08,
+      weight: 1.5,
+      dashArray: null,
+      interactive: false,
+      pane: 'circlePane'
+    }).addTo(courtLayer);
+    allRadiusCircles.push(circle);
+    return circle;
+  }
+
+  // Shoelace formula on lat/lon coords projected to local meters
+  function calcAreaSqFt(coords) {
+    if (!coords || coords.length < 3) return null;
+    const latRef = coords[0][0];
+    const metersPerDegLat = 111319.9;
+    const metersPerDegLon = 111319.9 * Math.cos(latRef * Math.PI / 180);
+    const pts = coords.map(([lat, lon]) => [
+      lon * metersPerDegLon,
+      lat * metersPerDegLat
+    ]);
+    let area = 0;
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = pts[i];
+      const [x2, y2] = pts[(i + 1) % n];
+      area += x1 * y2 - x2 * y1;
+    }
+    const sqMeters = Math.abs(area) / 2;
+    return Math.round(sqMeters * 10.7639);
+  }
+
+  function attachCircleHighlight(layer, circle) {
+    layer.on('popupopen', () => {
+      circle.setStyle({ weight: 2.5, dashArray: null, fillOpacity: 0.2, opacity: 1 });
+    });
+    layer.on('popupclose', () => {
+      circle.setStyle({ weight: 1.5, dashArray: null, fillOpacity: 0.08, opacity: 1 });
+    });
+  }
+
+  // Address cache keyed by "lat,lon"
+  const addressCache = {};
+
+  async function fetchAddress(lat, lon) {
+    const key = `${lat.toFixed(5)},${lon.toFixed(5)}`;
+    if (addressCache[key]) return addressCache[key];
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+    try {
+      const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+      const data = await resp.json();
+      const a = data.address || {};
+      const parts = [];
+      if (a.house_number && a.road) parts.push(`${a.house_number} ${a.road}`);
+      else if (a.road) parts.push(a.road);
+      if (a.city || a.town || a.village) parts.push(a.city || a.town || a.village);
+      if (a.state) parts.push(a.state);
+      if (a.postcode) parts.push(a.postcode);
+      const result = parts.length ? parts.join(', ') : (data.display_name || 'Address not found');
+      addressCache[key] = result;
+      return result;
+    } catch {
+      return 'Address lookup failed';
+    }
+  }
+
+  // OSM tags may already have addr:* fields
+  function osmAddress(tags) {
+    const num    = tags['addr:housenumber'] || '';
+    const street = tags['addr:street'] || '';
+    const city   = tags['addr:city'] || '';
+    const state  = tags['addr:state'] || '';
+    const zip    = tags['addr:postcode'] || '';
+    if (!street) return null;
+    return [num ? `${num} ${street}` : street, city, state, zip].filter(Boolean).join(', ');
+  }
+
+  function buildPopup(tags, type, lat, lon, layer, areaSqFt) {
+    const name    = tags.name    || 'Unnamed court';
+    const color   = COLORS[type] || COLORS.other;
+    const sport   = tags.sport   || type;
+    const areaStr = areaSqFt ? areaSqFt.toLocaleString() + ' sq ft' : '—';
+
+    const knownAddr = osmAddress(tags);
+
+    const id = `addr-${lat.toFixed(5).replace('.','')}-${lon.toFixed(5).replace('.','').replace('-','')}`;
+
+    const gmapsUrl = `https://www.google.com/maps/@${lat},${lon},19z/data=!3m1!1e3`;
+    const html = `
+      <strong>${name}</strong>
+      <span class="popup-type" style="background:${color}22;color:${color};border:1px solid ${color}44">${typeLabel(type)}</span>
+      <div class="popup-detail">Sport: ${sport}</div>
+      <div class="popup-detail">Area: ${areaStr}</div>
+      <div id="${id}" class="popup-address-loading">${knownAddr ? '' : 'Looking up address...'}</div>
+      ${knownAddr ? `<div class="popup-address">${knownAddr}</div>` : ''}
+      <div style="margin-top:8px"><a href="${gmapsUrl}" target="_blank" rel="noopener" style="color:#60a5fa;font-size:0.75rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px">&#x1F5FA; Open in Google Maps</a></div>
+    `;
+
+    layer.bindPopup(html, { offset: [0, -28] });
+
+    layer.on('popupopen', async () => {
+      selectedCourt = { lat, lon };
+      updateSatClip();
+      // For polygons: show only outline so satellite imagery shows through
+      if (layer.setStyle) layer.setStyle({ fill: false, weight: 3.5, color: '#fff' });
+      if (knownAddr) return;
+      const addr = await fetchAddress(lat, lon);
+      const el = document.getElementById(id);
+      if (el) {
+        el.className = 'popup-address';
+        el.textContent = addr;
+      }
+    });
+    layer.on('popupclose', () => {
+      selectedCourt = null;
+      updateSatClip();
+      // Restore original polygon style
+      if (layer.setStyle) layer.setStyle({ fill: true, ...makePolygonStyle(type) });
+    });
+  }
+
+  const statusEl       = document.getElementById('status');
+  const subtitleEl     = document.getElementById('subtitle');
+  const sliderEl       = document.getElementById('radius-slider');
+  const valueEl        = document.getElementById('radius-value');
+  const circleSliderEl = document.getElementById('circle-slider');
+  const circleValueEl  = document.getElementById('circle-value');
+  const legendCircleEl = document.getElementById('legend-circle-label');
+  const sizeSliderEl   = document.getElementById('size-slider');
+  const sizeValueEl    = document.getElementById('size-value');
+
+  function applyFilter() {
+    let visible = 0;
+    allCourts.forEach(({ layer, circle, areaSqFt }) => {
+      const show = areaSqFt === null || areaSqFt >= minCourtSizeFt;
+      if (show) {
+        if (!courtLayer.hasLayer(layer))  courtLayer.addLayer(layer);
+        if (!courtLayer.hasLayer(circle)) courtLayer.addLayer(circle);
+        visible++;
+      } else {
+        if (courtLayer.hasLayer(layer))  courtLayer.removeLayer(layer);
+        if (courtLayer.hasLayer(circle)) courtLayer.removeLayer(circle);
+      }
+    });
+    const sizeLabel = minCourtSizeFt <= 1000 ? 'all sizes' : `≥ ${minCourtSizeFt.toLocaleString()} sq ft`;
+    statusEl.textContent = `Showing ${visible} court(s) — ${sizeLabel}. Click any court to see its address.`;
+  }
+
+  let loadTimer = null;
+
+  function loadCourts() {
+    const miles = parseInt(sliderEl.value);
+    const radiusMeters = Math.round(miles * MILES_TO_METERS);
+    const label = miles === 1 ? '1 mile' : `${miles} miles`;
+
+    subtitleEl.textContent = `All sports courts within ${label} of ${CONFIG.locationName} — click any court for details and address`;
+    statusEl.textContent = `Loading courts for ${label} radius...`;
+    statusEl.style.color = '#93c5fd';
+
+    boundaryCircle.setRadius(radiusMeters);
+    courtLayer.clearLayers();
+    allRadiusCircles.length = 0;
+    allCourts.length = 0;
+
+    const overpassQuery = `
+[out:json][timeout:30];
+(
+  node["leisure"="pitch"](around:${radiusMeters},${CENTER[0]},${CENTER[1]});
+  way["leisure"="pitch"](around:${radiusMeters},${CENTER[0]},${CENTER[1]});
+  node["leisure"="sports_centre"](around:${radiusMeters},${CENTER[0]},${CENTER[1]});
+  way["leisure"="sports_centre"](around:${radiusMeters},${CENTER[0]},${CENTER[1]});
+  node["sport"="pickleball"](around:${radiusMeters},${CENTER[0]},${CENTER[1]});
+  way["sport"="pickleball"](around:${radiusMeters},${CENTER[0]},${CENTER[1]});
+);
+out body;
+>;
+out skel qt;
+    `.trim();
+
+    const fetchWithRetry = (url, retriesLeft = 3, delay = 2000) =>
+      fetch(url)
+        .then(r => r.text())
+        .then(text => {
+          if (text.trimStart().startsWith('<')) {
+            if (retriesLeft === 0) throw new Error('Overpass API unavailable — try again in a moment');
+            statusEl.textContent = `Server busy, retrying… (${retriesLeft} attempt${retriesLeft > 1 ? 's' : ''} left)`;
+            return new Promise(res => setTimeout(res, delay))
+              .then(() => fetchWithRetry(url, retriesLeft - 1, delay * 1.5));
+          }
+          return JSON.parse(text);
+        });
+
+    fetchWithRetry('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery))
+    .then(data => {
+      const nodes = {};
+      data.elements.forEach(el => {
+        if (el.type === 'node') nodes[el.id] = [el.lat, el.lon];
+      });
+
+      let count = 0;
+      const bounds = [];
+
+      data.elements.forEach(el => {
+        if (!el.tags) return;
+        const type = getSportType(el.tags);
+        if (type === 'exclude') return;
+
+        if (el.type === 'node') {
+          const marker = L.marker([el.lat, el.lon], { icon: makeIcon(type), pane: 'courtPane' });
+          const circle = addRadiusCircle(el.lat, el.lon, type);
+          buildPopup(el.tags, type, el.lat, el.lon, marker, null);
+          attachCircleHighlight(marker, circle);
+          marker.addTo(courtLayer);
+          allCourts.push({ layer: marker, circle, areaSqFt: null });
+          bounds.push([el.lat, el.lon]);
+          count++;
+        } else if (el.type === 'way' && el.nodes) {
+          const coords = el.nodes.map(id => nodes[id]).filter(Boolean);
+          if (coords.length < 2) return;
+          const lat = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+          const lon = coords.reduce((s, c) => s + c[1], 0) / coords.length;
+          const areaSqFt = calcAreaSqFt(coords);
+          const poly = L.polygon(coords, makePolygonStyle(type));
+          const circle = addRadiusCircle(lat, lon, type);
+          buildPopup(el.tags, type, lat, lon, poly, areaSqFt);
+          attachCircleHighlight(poly, circle);
+          poly.addTo(courtLayer);
+          allCourts.push({ layer: poly, circle, areaSqFt });
+          coords.forEach(c => bounds.push(c));
+          count++;
+        }
+      });
+
+      statusEl.innerHTML = `Found ${count} court feature(s) within ${label} of ${CONFIG.locationName}. Click any court to see its address. Data: <a href="https://www.openstreetmap.org/welcome" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:none">OpenStreetMap</a> / Nominatim.`;
+      statusEl.style.color = '#86efac';
+
+      if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+      }
+    })
+    .catch(err => {
+      statusEl.textContent = 'Error loading data: ' + err.message;
+      statusEl.style.color = '#fca5a5';
+    });
+  }
+
+  sliderEl.addEventListener('input', () => {
+    const miles = parseInt(sliderEl.value);
+    valueEl.textContent = miles === 1 ? '1 mile' : `${miles} miles`;
+    clearTimeout(loadTimer);
+    loadTimer = setTimeout(loadCourts, 600);
+  });
+
+  circleSliderEl.addEventListener('input', () => {
+    circleRadiusFt = parseInt(circleSliderEl.value);
+    const label = circleRadiusFt.toLocaleString() + ' ft';
+    circleValueEl.textContent = label;
+    legendCircleEl.textContent = label + ' radius';
+    const radiusMeters = circleRadiusFt * FEET_TO_METERS;
+    allRadiusCircles.forEach(c => c.setRadius(radiusMeters));
+    updateSatClip();
+  });
+
+  sizeSliderEl.addEventListener('input', () => {
+    minCourtSizeFt = parseInt(sizeSliderEl.value);
+    sizeValueEl.textContent = minCourtSizeFt <= 1000
+      ? 'All sizes'
+      : `≥ ${minCourtSizeFt.toLocaleString()} sq ft`;
+    applyFilter();
+  });
+
+  loadCourts();
+</script>
+</body>
+</html>
