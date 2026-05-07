@@ -38,6 +38,29 @@ const CONFIG = {
 
 To find coordinates for your location, right-click any point in Google Maps and copy the lat/lng shown at the top of the context menu.
 
+## Deploying publicly
+
+Because this is a single static HTML file with no backend, it can be hosted for free on several platforms with no server administration required.
+
+### Option A: GitHub Pages (easiest, free)
+
+1. Fork this repository on GitHub
+2. Edit `index.html` to set your `CONFIG` values (you can do this directly in the GitHub web editor)
+3. Go to your fork's **Settings → Pages**
+4. Under **Source**, select **Deploy from a branch**, choose `main`, folder `/root`, and click Save
+5. Your map will be live at `https://<your-github-username>.github.io/sports-courts-map/` within a minute or two
+
+### Option B: Netlify (free, drag-and-drop)
+
+1. Edit `index.html` with your `CONFIG` values
+2. Go to [netlify.com](https://www.netlify.com) and create a free account
+3. From the dashboard, drag and drop your `index.html` file onto the page
+4. Netlify gives you an instant public URL — you can set a custom domain in settings
+
+### Option C: Any static web host
+
+The file has no server-side dependencies. Upload `index.html` to any web host (shared hosting, S3, Cloudflare Pages, Vercel, etc.) and it will work. The only requirement is that it is served over HTTP/HTTPS — not opened directly as a `file://` URL.
+
 ## Data sources
 
 - Court geometry: [OpenStreetMap](https://www.openstreetmap.org) via [Overpass API](https://overpass-api.de)
