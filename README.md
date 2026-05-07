@@ -29,10 +29,10 @@ Edit the `CONFIG` block near the top of `index.html`:
 
 ```javascript
 const CONFIG = {
-  lat:          37.2358,      // Center latitude  (decimal degrees)
-  lng:         -121.9624,     // Center longitude (decimal degrees, negative = West)
-  locationName: 'Los Gatos',  // City / area name used in titles and status messages
-  defaultSearchMiles: 5,      // Starting search radius shown on page load (1–15)
+  lat:          39.7392,       // Center latitude  (decimal degrees)
+  lng:         -104.9903,      // Center longitude (decimal degrees, negative = West)
+  locationName: 'Denver',      // City / area name used in titles and status messages
+  defaultSearchMiles: 5,       // Starting search radius shown on page load (1–15)
 };
 ```
 
