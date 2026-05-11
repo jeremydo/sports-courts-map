@@ -229,7 +229,8 @@
     { pane: 'satellitePane', opacity: 0.75, attribution: 'Imagery &copy; Esri', maxZoom: 19 }
   );
 
-  let selectedCourt = null; // { lat, lon }
+  let selectedCourt = null;      // { lat, lon }
+  let selectedHouseholdId = null; // DOM id of the active popup's household span
 
   function updateSatClip() {
     const satPane = map.getPane('satellitePane');
@@ -259,6 +260,57 @@
   }
 
   map.on('move zoom moveend zoomend', updateSatClip);
+
+  // Make popups draggable. On mousedown we record the start position and
+  // reposition the popup's anchor lat/lng as the mouse moves, which keeps
+  // Leaflet's internal state consistent and survives map panning/zooming.
+  map.on('popupopen', (e) => {
+    const popup     = e.popup;
+    const container = popup.getElement();
+    if (!container) return;
+
+    container.style.cursor = 'grab';
+
+    let dragging = false, startX, startY, startLL;
+
+    function onDown(ev) {
+      // Only drag on left-button mouse; ignore clicks on links/buttons inside popup
+      if (ev.button !== 0 || ev.target.closest('a,button')) return;
+      dragging = true;
+      startX   = ev.clientX;
+      startY   = ev.clientY;
+      startLL  = popup.getLatLng();
+      container.style.cursor = 'grabbing';
+      // Prevent map from panning while we drag the popup
+      map.dragging.disable();
+      ev.stopPropagation();
+      ev.preventDefault();
+    }
+
+    function onMove(ev) {
+      if (!dragging) return;
+      const dx   = ev.clientX - startX;
+      const dy   = ev.clientY - startY;
+      const orig = map.latLngToContainerPoint(startLL);
+      popup.setLatLng(map.containerPointToLatLng(L.point(orig.x + dx, orig.y + dy)));
+    }
+
+    function onUp() {
+      if (!dragging) return;
+      dragging = false;
+      container.style.cursor = 'grab';
+      map.dragging.enable();
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+    }
+
+    container.addEventListener('mousedown', onDown);
+    // Attach move/up to document so drag works even if mouse leaves the popup
+    container.addEventListener('mousedown', () => {
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
+    });
+  });
 
   // Floating dB tooltip shown when mousing over the selected court's impact rings
   const dbTooltip = document.createElement('div');
@@ -459,6 +511,118 @@
     }
   }
 
+  // ── Household estimation ────────────────────────────────────────────────────
+  // Strategy:
+  //   1. Count address nodes (addr:housenumber) — each = 1 unit, works well for
+  //      single-family homes which are typically individually mapped.
+  //   2. For multi-unit buildings (apartments, flats, dormitories) that are
+  //      under-represented by address nodes, estimate unit count from:
+  //        a. building:units tag (explicit)
+  //        b. building:levels × footprint_area / avg_unit_size
+  //        c. building type default
+  //      Subtract any address nodes already inside that polygon to avoid
+  //      double-counting.
+
+  const householdCache = {};
+
+  function pointInPolygon(point, polygon) {
+    const [px, py] = point;
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const [xi, yi] = polygon[i];
+      const [xj, yj] = polygon[j];
+      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  const MULTI_UNIT_TYPES = new Set(['apartments', 'flat', 'flats', 'dormitory', 'block_of_flats']);
+  const EXCLUDED_TYPES   = new Set([
+    'commercial', 'industrial', 'retail', 'office', 'school', 'church', 'cathedral',
+    'chapel', 'mosque', 'synagogue', 'temple', 'hospital', 'university', 'college',
+    'garage', 'garages', 'shed', 'greenhouse', 'barn', 'stable', 'farm_auxiliary',
+    'sports_hall', 'stadium', 'kiosk', 'warehouse', 'storage_tank', 'service',
+    'transportation', 'hangar', 'toilets', 'bunker', 'ruins'
+  ]);
+
+  async function estimateHouseholds(lat, lon, radiusM) {
+    const key = `${lat.toFixed(4)},${lon.toFixed(4)},${Math.round(radiusM)}`;
+    if (householdCache[key] !== undefined) return householdCache[key];
+
+    const query = `
+[out:json][timeout:30];
+(
+  node["addr:housenumber"](around:${Math.round(radiusM)},${lat},${lon});
+  way["building"](around:${Math.round(radiusM)},${lat},${lon});
+);
+out body;
+>;
+out skel qt;`.trim();
+
+    const text = await fetch(
+      'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query)
+    ).then(r => r.text());
+    if (text.trimStart().startsWith('<')) throw new Error('Overpass busy');
+    const data = JSON.parse(text);
+
+    const nodeCoords  = {};
+    const addrNodes   = []; // standalone address nodes [lat,lon]
+    const buildings   = []; // all building way elements
+
+    data.elements.forEach(el => {
+      if (el.type === 'node') {
+        nodeCoords[el.id] = [el.lat, el.lon];
+        if (el.tags?.['addr:housenumber']) addrNodes.push([el.lat, el.lon]);
+      } else if (el.type === 'way' && el.tags?.building && el.tags.building !== 'no') {
+        buildings.push(el);
+      }
+    });
+
+    let total = 0;
+    const buildingPolygons = []; // used for dedup of address nodes below
+
+    buildings.forEach(way => {
+      const btype = (way.tags.building || '').toLowerCase();
+      if (EXCLUDED_TYPES.has(btype)) return;
+
+      const coords = (way.nodes || []).map(id => nodeCoords[id]).filter(Boolean);
+      if (coords.length < 3) return;
+
+      buildingPolygons.push(coords);
+
+      if (MULTI_UNIT_TYPES.has(btype)) {
+        // Estimate unit count for apartment-style buildings
+        const explicit  = parseInt(way.tags['building:units']);
+        const levels    = parseInt(way.tags['building:levels']) || 3;
+        const sqFt      = calcAreaSqFt(coords) || 2000;
+        const perFloor  = Math.max(1, Math.round(sqFt / 850)); // avg ~850 sqft/unit
+        const estimated = explicit || Math.max(4, perFloor * levels);
+        // Use the higher of address-node count inside vs estimated units
+        const covered = addrNodes.filter(pt => pointInPolygon(pt, coords)).length;
+        total += Math.max(covered, estimated);
+      } else if (btype === 'semidetached_house') {
+        total += 2;
+      } else {
+        // house, detached, bungalow, residential, yes, terrace, etc. → 1 unit each.
+        // In US OSM, most buildings come from AI imports tagged building=yes,
+        // so this is the primary path for single-family homes.
+        total += 1;
+      }
+    });
+
+    // Also count standalone address nodes NOT inside any building polygon —
+    // these represent units in areas where building outlines haven't been mapped yet.
+    addrNodes.forEach(pt => {
+      if (!buildingPolygons.some(poly => pointInPolygon(pt, poly))) total += 1;
+    });
+
+    householdCache[key] = total;
+    return total;
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   // OSM tags may already have addr:* fields
   function osmAddress(tags) {
     const num    = tags['addr:housenumber'] || '';
@@ -478,7 +642,8 @@
 
     const knownAddr = osmAddress(tags);
 
-    const id = `addr-${lat.toFixed(5).replace('.','')}-${lon.toFixed(5).replace('.','').replace('-','')}`;
+    const id          = `addr-${lat.toFixed(5).replace('.','')}-${lon.toFixed(5).replace('.','').replace('-','')}`;
+    const householdId = `hh-${lat.toFixed(5).replace('.','')}-${lon.toFixed(5).replace('.','').replace('-','')}`;
 
     const gmapsUrl = `https://www.google.com/maps/@${lat},${lon},19z/data=!3m1!1e3`;
     const html = `
@@ -488,6 +653,7 @@
       <div class="popup-detail">Area: ${areaStr}</div>
       <div id="${id}" class="popup-address-loading">${knownAddr ? '' : 'Looking up address...'}</div>
       ${knownAddr ? `<div class="popup-address">${knownAddr}</div>` : ''}
+      <div id="${householdId}" class="popup-address-loading" style="margin-top:4px">Estimating households…</div>
       <div style="margin-top:8px"><a href="${gmapsUrl}" target="_blank" rel="noopener" style="color:#60a5fa;font-size:0.75rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px">&#x1F5FA; Open in Google Maps</a></div>
     `;
 
@@ -495,22 +661,37 @@
 
     layer.on('popupopen', async () => {
       selectedCourt = { lat, lon };
+      selectedHouseholdId = householdId;
       updateSatClip();
       if (layer.setStyle) layer.setStyle({ fill: false, weight: 3.5, color: '#fff' });
-      // Highlight each ring's edge using its own fill colour at full opacity
       if (rings) rings.forEach(r =>
         r.setStyle({ weight: 2, color: r.options.fillColor, opacity: 1 })
       );
-      if (knownAddr) return;
-      const addr = await fetchAddress(lat, lon);
-      const el = document.getElementById(id);
-      if (el) {
-        el.className = 'popup-address';
-        el.textContent = addr;
+
+      // Address lookup (skip if already known)
+      if (!knownAddr) {
+        fetchAddress(lat, lon).then(addr => {
+          const el = document.getElementById(id);
+          if (el) { el.className = 'popup-address'; el.textContent = addr; }
+        });
       }
+
+      // Household estimate — always runs, keyed by court + current radius
+      const radiusM = circleRadiusFt * FEET_TO_METERS;
+      estimateHouseholds(lat, lon, radiusM).then(count => {
+        const el = document.getElementById(householdId);
+        if (el) {
+          el.className = 'popup-detail';
+          el.innerHTML = `~${count.toLocaleString()} households within impact zone <span style="color:#475569">(est.)</span>`;
+        }
+      }).catch(() => {
+        const el = document.getElementById(householdId);
+        if (el) { el.className = 'popup-detail'; el.textContent = 'Household count unavailable'; }
+      });
     });
     layer.on('popupclose', () => {
       selectedCourt = null;
+      selectedHouseholdId = null;
       updateSatClip();
       if (layer.setStyle) layer.setStyle({ fill: true, ...makePolygonStyle(type) });
       if (rings) rings.forEach(r =>
@@ -655,6 +836,24 @@ out skel qt;
     legendCircleEl.textContent = label + ' impact zones:';
     rebuildAllRings();
     updateSatClip();
+
+    // Refresh household estimate for the open popup at the new radius
+    if (selectedCourt && selectedHouseholdId) {
+      const hhEl = document.getElementById(selectedHouseholdId);
+      if (hhEl) { hhEl.className = 'popup-address-loading'; hhEl.textContent = 'Estimating households…'; }
+      estimateHouseholds(selectedCourt.lat, selectedCourt.lon, circleRadiusFt * FEET_TO_METERS)
+        .then(count => {
+          const el = document.getElementById(selectedHouseholdId);
+          if (el) {
+            el.className = 'popup-detail';
+            el.innerHTML = `~${count.toLocaleString()} households within impact zone <span style="color:#475569">(est.)</span>`;
+          }
+        })
+        .catch(() => {
+          const el = document.getElementById(selectedHouseholdId);
+          if (el) { el.className = 'popup-detail'; el.textContent = 'Household count unavailable'; }
+        });
+    }
   });
 
   sizeSliderEl.addEventListener('input', () => {
