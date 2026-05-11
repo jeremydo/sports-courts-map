@@ -116,6 +116,31 @@
 </div>
 
 <div class="card">
+  <h2>How dwelling unit estimates work</h2>
+  <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;line-height:1.6">
+    When you click a court, the map queries OpenStreetMap for all building
+    footprints within the impact radius and estimates dwelling units as follows:
+  </p>
+  <ul style="font-size:0.82rem;color:#94a3b8;line-height:1.8;padding-left:18px;margin-bottom:14px">
+    <li><strong style="color:#cbd5e1">Single-family buildings</strong> (house, detached, bungalow, or generic <code style="background:#0f172a;padding:1px 4px;border-radius:3px">building=yes</code>) — counted as <strong style="color:#cbd5e1">1 unit each</strong>.</li>
+    <li><strong style="color:#cbd5e1">Semi-detached homes</strong> — counted as <strong style="color:#cbd5e1">2 units</strong>.</li>
+    <li><strong style="color:#cbd5e1">Apartment / multi-unit buildings</strong> — estimated using
+      <code style="background:#0f172a;padding:1px 4px;border-radius:3px">building:units</code> tag if present,
+      otherwise <em>floor count × footprint area ÷ 850 sq ft per unit</em>, with a minimum of 4.</li>
+    <li><strong style="color:#cbd5e1">Commercial, industrial, and civic buildings</strong> — excluded.</li>
+    <li><strong style="color:#cbd5e1">Standalone address nodes</strong> not inside any building outline are
+      counted as 1 unit each (fallback for unmapped areas).</li>
+  </ul>
+  <div style="background:#1c1917;border:1px solid #78350f;border-radius:7px;padding:10px 14px;font-size:0.78rem;color:#fcd34d;line-height:1.6">
+    <strong style="color:#fbbf24">Why estimates may be slightly high:</strong>
+    Buildings tagged generically as <code style="background:#0f172a;padding:1px 4px;border-radius:3px">building=yes</code>
+    are assumed residential — some may actually be garages, sheds, or commercial structures
+    that weren't tagged precisely in OSM. Multi-unit estimates also use a generic average
+    unit size. Treat the number as an order-of-magnitude guide rather than a precise count.
+  </div>
+</div>
+
+<div class="card">
   <h2>Host your own version</h2>
   <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:16px">
     This is an open-source single-file web app. Fork it on GitHub to deploy your own

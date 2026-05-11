@@ -653,7 +653,7 @@ out skel qt;`.trim();
       <div class="popup-detail">Area: ${areaStr}</div>
       <div id="${id}" class="popup-address-loading">${knownAddr ? '' : 'Looking up address...'}</div>
       ${knownAddr ? `<div class="popup-address">${knownAddr}</div>` : ''}
-      <div id="${householdId}" class="popup-address-loading" style="margin-top:4px">Estimating households…</div>
+      <div id="${householdId}" class="popup-address-loading" style="margin-top:4px">Estimating dwelling units…</div>
       <div style="margin-top:8px"><a href="${gmapsUrl}" target="_blank" rel="noopener" style="color:#60a5fa;font-size:0.75rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px">&#x1F5FA; Open in Google Maps</a></div>
     `;
 
@@ -682,11 +682,11 @@ out skel qt;`.trim();
         const el = document.getElementById(householdId);
         if (el) {
           el.className = 'popup-detail';
-          el.innerHTML = `~${count.toLocaleString()} households within impact zone <span style="color:#475569">(est.)</span>`;
+          el.innerHTML = `~${count.toLocaleString()} dwelling units within impact zone <span style="color:#475569">(est.)</span>`;
         }
       }).catch(() => {
         const el = document.getElementById(householdId);
-        if (el) { el.className = 'popup-detail'; el.textContent = 'Household count unavailable'; }
+        if (el) { el.className = 'popup-detail'; el.textContent = 'Dwelling unit count unavailable'; }
       });
     });
     layer.on('popupclose', () => {
@@ -840,18 +840,18 @@ out skel qt;
     // Refresh household estimate for the open popup at the new radius
     if (selectedCourt && selectedHouseholdId) {
       const hhEl = document.getElementById(selectedHouseholdId);
-      if (hhEl) { hhEl.className = 'popup-address-loading'; hhEl.textContent = 'Estimating households…'; }
+      if (hhEl) { hhEl.className = 'popup-address-loading'; hhEl.textContent = 'Estimating dwelling units…'; }
       estimateHouseholds(selectedCourt.lat, selectedCourt.lon, circleRadiusFt * FEET_TO_METERS)
         .then(count => {
           const el = document.getElementById(selectedHouseholdId);
           if (el) {
             el.className = 'popup-detail';
-            el.innerHTML = `~${count.toLocaleString()} households within impact zone <span style="color:#475569">(est.)</span>`;
+            el.innerHTML = `~${count.toLocaleString()} dwelling units within impact zone <span style="color:#475569">(est.)</span>`;
           }
         })
         .catch(() => {
           const el = document.getElementById(selectedHouseholdId);
-          if (el) { el.className = 'popup-detail'; el.textContent = 'Household count unavailable'; }
+          if (el) { el.className = 'popup-detail'; el.textContent = 'Dwelling unit count unavailable'; }
         });
     }
   });
