@@ -87,7 +87,7 @@
       border: 1px solid #334155;
       border-radius: 8px;
     }
-    .leaflet-popup-tip { background: #1e293b; }
+    .leaflet-popup-tip-container { display: none; }
     .leaflet-popup-content { margin: 10px 14px; font-size: 0.82rem; line-height: 1.6; min-width: 200px; }
     .leaflet-popup-content strong { color: #93c5fd; display: block; margin-bottom: 4px; }
     .popup-type { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; margin-bottom: 6px; }
@@ -110,6 +110,10 @@
   <div>
     <h1 id="page-title">Sports Courts Map — Potential Pickleball Sites</h1>
     <p id="subtitle"></p>
+    <a href="settings.html" style="font-size:0.72rem;color:#64748b;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:3px" title="Change starting location / about">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings &amp; about
+    </a>
   </div>
   <div id="radius-control">
     <label for="radius-slider">Search radius:</label>
@@ -134,9 +138,28 @@
     <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Basketball</div>
     <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div> Pickleball</div>
 <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> Other / Multi-sport</div>
-    <div class="legend-item" style="margin-left:8px;padding-left:8px;border-left:1px solid #334155">
-      <div style="width:14px;height:14px;border-radius:50%;border:1.5px dashed #94a3b8;flex-shrink:0"></div>
-      <span id="legend-circle-label">1,000 ft radius</span>
+    <div style="margin-left:8px;padding-left:8px;border-left:1px solid #334155;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:0.72rem;color:#94a3b8;white-space:nowrap" id="legend-circle-label">1,000 ft impact zones:</span>
+      <div style="display:flex;align-items:center;gap:3px">
+        <div style="width:12px;height:12px;border-radius:50%;background:#7f1d1d;opacity:0.85"></div>
+        <span style="font-size:0.68rem;color:#cbd5e1">&gt;64 dB</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:3px">
+        <div style="width:12px;height:12px;border-radius:50%;background:#ef4444;opacity:0.85"></div>
+        <span style="font-size:0.68rem;color:#cbd5e1">58–64</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:3px">
+        <div style="width:12px;height:12px;border-radius:50%;background:#fb923c;opacity:0.85"></div>
+        <span style="font-size:0.68rem;color:#cbd5e1">54–58</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:3px">
+        <div style="width:12px;height:12px;border-radius:50%;background:#fde047;opacity:0.85"></div>
+        <span style="font-size:0.68rem;color:#cbd5e1">52–54</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:3px">
+        <div style="width:12px;height:12px;border-radius:50%;background:#86efac;opacity:0.85"></div>
+        <span style="font-size:0.68rem;color:#cbd5e1">50–52 dB</span>
+      </div>
     </div>
   </div>
 </div>
@@ -147,12 +170,22 @@
 <script>
   // ── CONFIGURATION — edit these three values to use this tool for any location ──
   const CONFIG = {
-    lat:          39.7392,       // Center latitude  (decimal degrees)
-    lng:         -104.9903,      // Center longitude (decimal degrees, negative = West)
-    locationName: 'Denver',      // City / area name used in titles and status messages
+    lat:          37.2358,      // Center latitude  (decimal degrees)
+    lng:         -121.9624,     // Center longitude (decimal degrees, negative = West)
+    locationName: 'Los Gatos',  // City / area name used in titles and status messages
     defaultSearchMiles: 5,      // Starting search radius shown on page load (1–15)
   };
   // ──────────────────────────────────────────────────────────────────────────────
+
+  // Allow localStorage (set via settings.html) to override CONFIG
+  try {
+    const saved = JSON.parse(localStorage.getItem('courts_map_location'));
+    if (saved && saved.lat && saved.lng) {
+      CONFIG.lat          = saved.lat;
+      CONFIG.lng          = saved.lng;
+      CONFIG.locationName = saved.name || CONFIG.locationName;
+    }
+  } catch {}
 
   const CENTER = [CONFIG.lat, CONFIG.lng];
   const MILES_TO_METERS = 1609.344;
@@ -227,6 +260,53 @@
 
   map.on('move zoom moveend zoomend', updateSatClip);
 
+  // Floating dB tooltip shown when mousing over the selected court's impact rings
+  const dbTooltip = document.createElement('div');
+  dbTooltip.style.cssText = [
+    'position:fixed',
+    'display:none',
+    'background:#1e293b',
+    'color:#e2e8f0',
+    'padding:5px 10px',
+    'border-radius:5px',
+    'font-size:0.75rem',
+    'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    'pointer-events:none',
+    'z-index:9999',
+    'border:1px solid #475569',
+    'white-space:nowrap',
+  ].join(';');
+  document.body.appendChild(dbTooltip);
+
+  // dB at distance d (feet) from court — 6 dB per doubling, ~90 dB at 10 ft source
+  function dbAtFt(ft) {
+    return Math.round(90 - 20 * Math.log10(Math.max(ft, 10) / 10));
+  }
+
+  function dbLabel(db) {
+    if (db >= 70) return 'severely bothersome';
+    if (db >= 65) return 'very bothersome';
+    if (db >= 60) return 'bothersome';
+    if (db >= 55) return 'noticeable';
+    if (db >= 50) return 'at threshold';
+    return 'below threshold';
+  }
+
+  map.on('mousemove', (e) => {
+    if (!selectedCourt) { dbTooltip.style.display = 'none'; return; }
+    const distFt = e.latlng.distanceTo([selectedCourt.lat, selectedCourt.lon]) / FEET_TO_METERS;
+    if (distFt > circleRadiusFt) { dbTooltip.style.display = 'none'; return; }
+    const db = dbAtFt(distFt);
+    dbTooltip.textContent = `~${db} dB LAFmax — ${dbLabel(db)}`;
+    dbTooltip.style.display = 'block';
+    dbTooltip.style.left = (e.originalEvent.clientX + 16) + 'px';
+    dbTooltip.style.top  = (e.originalEvent.clientY - 12) + 'px';
+  });
+
+  map.getContainer().addEventListener('mouseleave', () => {
+    dbTooltip.style.display = 'none';
+  });
+
   const satToggle  = document.getElementById('sat-toggle');
   const satControl = document.getElementById('sat-control');
   satToggle.addEventListener('change', () => {
@@ -289,24 +369,48 @@
   const FEET_TO_METERS = 0.3048;
   let circleRadiusFt = 1000;
   let minCourtSizeFt = 1000;
-  const allRadiusCircles = [];
-  // { layer, circle, areaSqFt } — used for size filtering
+  // { layer, rings[], lat, lon, type, areaSqFt } — used for filtering and ring rebuilds
   const allCourts = [];
 
-  function addRadiusCircle(lat, lon, type) {
-    const color = COLORS[type] || COLORS.other;
-    const circle = L.circle([lat, lon], {
-      radius: circleRadiusFt * FEET_TO_METERS,
-      color: color,
-      fillColor: color,
-      fillOpacity: 0.08,
-      weight: 1.5,
-      dashArray: null,
-      interactive: false,
-      pane: 'circlePane'
-    }).addTo(courtLayer);
-    allRadiusCircles.push(circle);
-    return circle;
+  // Sound falloff bands based on the Manchester pickleball study (no barriers).
+  // Physics: 6 dB reduction per doubling of distance from source (~90 dB LAFmax at court).
+  // Circles are drawn outermost-first so inner bands stack on top, creating the gradient.
+  // Overlapping zones from adjacent courts stack opacity automatically, showing cumulative impact.
+  const IMPACT_BANDS = [
+    { maxFt: 1000, color: '#86efac', fillOpacity: 0.05 }, // ~50–52 dB — at threshold
+    { maxFt:  800, color: '#fde047', fillOpacity: 0.08 }, // ~52–54 dB — noticeable
+    { maxFt:  600, color: '#fb923c', fillOpacity: 0.11 }, // ~54–58 dB — moderate
+    { maxFt:  400, color: '#ef4444', fillOpacity: 0.15 }, // ~58–64 dB — high
+    { maxFt:  200, color: '#7f1d1d', fillOpacity: 0.20 }, // >64 dB    — very high
+  ];
+
+  function addImpactRings(lat, lon) {
+    const rings = [];
+    // Filter to active bands, then draw outermost → innermost
+    IMPACT_BANDS
+      .filter(b => b.maxFt <= circleRadiusFt)
+      .forEach(b => {
+        const ring = L.circle([lat, lon], {
+          radius: b.maxFt * FEET_TO_METERS,
+          color: 'transparent',
+          fillColor: b.color,
+          fillOpacity: b.fillOpacity,
+          weight: 0,
+          interactive: false,
+          pane: 'circlePane'
+        }).addTo(courtLayer);
+        rings.push(ring);
+      });
+    return rings;
+  }
+
+  function rebuildAllRings() {
+    allCourts.forEach(court => {
+      court.rings.forEach(r => courtLayer.removeLayer(r));
+      court.rings.length = 0;
+      const newRings = addImpactRings(court.lat, court.lon);
+      court.rings.push(...newRings);
+    });
   }
 
   // Shoelace formula on lat/lon coords projected to local meters
@@ -328,15 +432,6 @@
     }
     const sqMeters = Math.abs(area) / 2;
     return Math.round(sqMeters * 10.7639);
-  }
-
-  function attachCircleHighlight(layer, circle) {
-    layer.on('popupopen', () => {
-      circle.setStyle({ weight: 2.5, dashArray: null, fillOpacity: 0.2, opacity: 1 });
-    });
-    layer.on('popupclose', () => {
-      circle.setStyle({ weight: 1.5, dashArray: null, fillOpacity: 0.08, opacity: 1 });
-    });
   }
 
   // Address cache keyed by "lat,lon"
@@ -375,7 +470,7 @@
     return [num ? `${num} ${street}` : street, city, state, zip].filter(Boolean).join(', ');
   }
 
-  function buildPopup(tags, type, lat, lon, layer, areaSqFt) {
+  function buildPopup(tags, type, lat, lon, layer, areaSqFt, rings) {
     const name    = tags.name    || 'Unnamed court';
     const color   = COLORS[type] || COLORS.other;
     const sport   = tags.sport   || type;
@@ -396,13 +491,16 @@
       <div style="margin-top:8px"><a href="${gmapsUrl}" target="_blank" rel="noopener" style="color:#60a5fa;font-size:0.75rem;text-decoration:none;display:inline-flex;align-items:center;gap:4px">&#x1F5FA; Open in Google Maps</a></div>
     `;
 
-    layer.bindPopup(html, { offset: [0, -28] });
+    layer.bindPopup(html, { offset: [0, -70] });
 
     layer.on('popupopen', async () => {
       selectedCourt = { lat, lon };
       updateSatClip();
-      // For polygons: show only outline so satellite imagery shows through
       if (layer.setStyle) layer.setStyle({ fill: false, weight: 3.5, color: '#fff' });
+      // Highlight each ring's edge using its own fill colour at full opacity
+      if (rings) rings.forEach(r =>
+        r.setStyle({ weight: 2, color: r.options.fillColor, opacity: 1 })
+      );
       if (knownAddr) return;
       const addr = await fetchAddress(lat, lon);
       const el = document.getElementById(id);
@@ -414,8 +512,10 @@
     layer.on('popupclose', () => {
       selectedCourt = null;
       updateSatClip();
-      // Restore original polygon style
       if (layer.setStyle) layer.setStyle({ fill: true, ...makePolygonStyle(type) });
+      if (rings) rings.forEach(r =>
+        r.setStyle({ weight: 0, color: 'transparent', opacity: 0 })
+      );
     });
   }
 
@@ -431,15 +531,15 @@
 
   function applyFilter() {
     let visible = 0;
-    allCourts.forEach(({ layer, circle, areaSqFt }) => {
+    allCourts.forEach(({ layer, rings, areaSqFt }) => {
       const show = areaSqFt === null || areaSqFt >= minCourtSizeFt;
       if (show) {
-        if (!courtLayer.hasLayer(layer))  courtLayer.addLayer(layer);
-        if (!courtLayer.hasLayer(circle)) courtLayer.addLayer(circle);
+        if (!courtLayer.hasLayer(layer)) courtLayer.addLayer(layer);
+        rings.forEach(r => { if (!courtLayer.hasLayer(r)) courtLayer.addLayer(r); });
         visible++;
       } else {
-        if (courtLayer.hasLayer(layer))  courtLayer.removeLayer(layer);
-        if (courtLayer.hasLayer(circle)) courtLayer.removeLayer(circle);
+        if (courtLayer.hasLayer(layer)) courtLayer.removeLayer(layer);
+        rings.forEach(r => { if (courtLayer.hasLayer(r)) courtLayer.removeLayer(r); });
       }
     });
     const sizeLabel = minCourtSizeFt <= 1000 ? 'all sizes' : `≥ ${minCourtSizeFt.toLocaleString()} sq ft`;
@@ -459,7 +559,6 @@
 
     boundaryCircle.setRadius(radiusMeters);
     courtLayer.clearLayers();
-    allRadiusCircles.length = 0;
     allCourts.length = 0;
 
     const overpassQuery = `
@@ -507,11 +606,10 @@ out skel qt;
 
         if (el.type === 'node') {
           const marker = L.marker([el.lat, el.lon], { icon: makeIcon(type), pane: 'courtPane' });
-          const circle = addRadiusCircle(el.lat, el.lon, type);
-          buildPopup(el.tags, type, el.lat, el.lon, marker, null);
-          attachCircleHighlight(marker, circle);
+          const rings = addImpactRings(el.lat, el.lon);
+          buildPopup(el.tags, type, el.lat, el.lon, marker, null, rings);
           marker.addTo(courtLayer);
-          allCourts.push({ layer: marker, circle, areaSqFt: null });
+          allCourts.push({ layer: marker, rings, lat: el.lat, lon: el.lon, type, areaSqFt: null });
           bounds.push([el.lat, el.lon]);
           count++;
         } else if (el.type === 'way' && el.nodes) {
@@ -521,11 +619,10 @@ out skel qt;
           const lon = coords.reduce((s, c) => s + c[1], 0) / coords.length;
           const areaSqFt = calcAreaSqFt(coords);
           const poly = L.polygon(coords, makePolygonStyle(type));
-          const circle = addRadiusCircle(lat, lon, type);
-          buildPopup(el.tags, type, lat, lon, poly, areaSqFt);
-          attachCircleHighlight(poly, circle);
+          const rings = addImpactRings(lat, lon);
+          buildPopup(el.tags, type, lat, lon, poly, areaSqFt, rings);
           poly.addTo(courtLayer);
-          allCourts.push({ layer: poly, circle, areaSqFt });
+          allCourts.push({ layer: poly, rings, lat, lon, type, areaSqFt });
           coords.forEach(c => bounds.push(c));
           count++;
         }
@@ -555,9 +652,8 @@ out skel qt;
     circleRadiusFt = parseInt(circleSliderEl.value);
     const label = circleRadiusFt.toLocaleString() + ' ft';
     circleValueEl.textContent = label;
-    legendCircleEl.textContent = label + ' radius';
-    const radiusMeters = circleRadiusFt * FEET_TO_METERS;
-    allRadiusCircles.forEach(c => c.setRadius(radiusMeters));
+    legendCircleEl.textContent = label + ' impact zones:';
+    rebuildAllRings();
     updateSatClip();
   });
 
