@@ -106,6 +106,45 @@
 </head>
 <body>
 
+<!-- Disclaimer modal -->
+<div id="disclaimer-backdrop" style="
+  position:fixed;inset:0;z-index:100000;
+  background:rgba(0,0,0,0.75);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+">
+  <div style="
+    background:#1e293b;border:1px solid #334155;border-radius:12px;
+    max-width:480px;width:100%;padding:32px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  ">
+    <h2 style="color:#e2e8f0;font-size:1.1rem;margin-bottom:18px;line-height:1.4">Before you explore — a note on accuracy</h2>
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+      <div style="background:#0f172a;border-left:3px solid #3b82f6;border-radius:0 6px 6px 0;padding:12px 14px">
+        <div style="color:#93c5fd;font-size:0.78rem;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">Map data</div>
+        <div style="color:#94a3b8;font-size:0.83rem;line-height:1.6">Courts and buildings are drawn from OpenStreetMap, which is built by volunteers. Some courts or homes in your area may be missing if they haven't been added yet.</div>
+      </div>
+      <div style="background:#0f172a;border-left:3px solid #f97316;border-radius:0 6px 6px 0;padding:12px 14px">
+        <div style="color:#fdba74;font-size:0.78rem;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">Noise zones</div>
+        <div style="color:#94a3b8;font-size:0.83rem;line-height:1.6">The colored rings show how sound travels in open, flat conditions with nothing in the way. In practice, fences, buildings, hills, and trees all reduce noise levels — so the actual impact at any given home is likely less than shown.</div>
+      </div>
+    </div>
+    <button id="disclaimer-ok" style="
+      width:100%;padding:11px;border:none;border-radius:7px;
+      background:#3b82f6;color:#fff;font-size:0.9rem;font-weight:600;
+      cursor:pointer;transition:background 0.15s;
+    " onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+      Got it, show me the map
+    </button>
+  </div>
+</div>
+<script>
+  document.getElementById('disclaimer-ok').addEventListener('click', () => {
+    document.getElementById('disclaimer-backdrop').style.display = 'none';
+  });
+</script>
+
 <div id="header">
   <div>
     <h1 id="page-title">Sports Courts Map — Potential Pickleball Sites</h1>
