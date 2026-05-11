@@ -379,15 +379,14 @@
   ].join(';');
   dwTooltip.innerHTML = [
     '<strong style="color:#e2e8f0;display:block;margin-bottom:6px">How dwelling units are estimated</strong>',
-    '<ul style="margin:0 0 8px 0;padding-left:16px;line-height:1.8">',
-    '<li><b style="color:#cbd5e1">Single-family</b> (house, detached, bungalow, or untagged <code style="background:#0f172a;padding:1px 3px;border-radius:3px">building=yes</code>) — 1 unit</li>',
+    '<ul style="margin:0 0 8px 0;padding-left:16px;line-height:1.7">',
+    '<li><b style="color:#cbd5e1">Single-family / detached</b> — 1 unit</li>',
     '<li><b style="color:#cbd5e1">Semi-detached</b> — 2 units</li>',
-    '<li><b style="color:#cbd5e1">Apartments / multi-unit</b> — <code style="background:#0f172a;padding:1px 3px;border-radius:3px">building:units</code> tag if set, otherwise floors × footprint ÷ 850 sq ft (min 4)</li>',
+    '<li><b style="color:#cbd5e1">Apartments</b> — from tag or floors × footprint ÷ 850 sq ft (min 4)</li>',
     '<li><b style="color:#cbd5e1">Commercial, industrial, civic</b> — excluded</li>',
-    '<li><b style="color:#cbd5e1">Unmapped areas</b> — standalone address nodes outside building outlines counted as 1 each</li>',
     '</ul>',
-    '<div style="color:#fcd34d;font-size:0.72rem;border-top:1px solid #334155;padding-top:7px">',
-    'Estimates may run slightly high — untagged <code style="background:#0f172a;padding:1px 3px;border-radius:3px">building=yes</code> entries sometimes include garages or sheds. Treat as order-of-magnitude.',
+    '<div style="color:#fcd34d;font-size:0.72rem;border-top:1px solid #334155;padding-top:7px;line-height:1.6">',
+    'Only counts buildings already traced in OpenStreetMap — areas with incomplete mapping will show lower estimates. May also run slightly high where generic building tags include garages or sheds.',
     '</div>',
   ].join('');
   document.body.appendChild(dwTooltip);
