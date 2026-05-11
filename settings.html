@@ -116,27 +116,36 @@
 </div>
 
 <div class="card">
-  <h2>How dwelling unit estimates work</h2>
+  <h2>Sound levels and propagation model</h2>
   <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;line-height:1.6">
-    When you click a court, the map queries OpenStreetMap for all building
-    footprints within the impact radius and estimates dwelling units as follows:
+    The colored impact zones on the map are based on the
+    <a href="https://www.manchester.ma.us/DocumentCenter/View/7767/2023-Manchester-Pickleball-Sound-Mitigation-Study" target="_blank" rel="noopener" style="color:#60a5fa">2023 Manchester Pickleball Sound Mitigation Study</a>,
+    which measured actual court noise levels and modeled propagation under various barrier conditions.
+    This map uses the <strong style="color:#cbd5e1">no-barrier baseline</strong>.
+  </p>
+  <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;line-height:1.6">
+    Sound levels are calculated using standard outdoor propagation: <strong style="color:#cbd5e1">6 dB reduction per doubling of distance</strong>,
+    anchored to a source level of approximately <strong style="color:#cbd5e1">90 dB LAFmax at 10 ft</strong> from the court surface
+    (consistent with the study's measured values). The formula applied is:
+  </p>
+  <div style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:10px 16px;font-family:monospace;font-size:0.8rem;color:#93c5fd;margin-bottom:14px">
+    dB(d) = 90 − 20 × log₁₀(d / 10)
+  </div>
+  <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;line-height:1.6">
+    This gives approximate values of ~72 dB at 80 ft, ~65 dB at 220 ft, and ~52 dB at 800 ft —
+    consistent with the study's field measurements. The color bands correspond to:
   </p>
   <ul style="font-size:0.82rem;color:#94a3b8;line-height:1.8;padding-left:18px;margin-bottom:14px">
-    <li><strong style="color:#cbd5e1">Single-family buildings</strong> (house, detached, bungalow, or generic <code style="background:#0f172a;padding:1px 4px;border-radius:3px">building=yes</code>) — counted as <strong style="color:#cbd5e1">1 unit each</strong>.</li>
-    <li><strong style="color:#cbd5e1">Semi-detached homes</strong> — counted as <strong style="color:#cbd5e1">2 units</strong>.</li>
-    <li><strong style="color:#cbd5e1">Apartment / multi-unit buildings</strong> — estimated using
-      <code style="background:#0f172a;padding:1px 4px;border-radius:3px">building:units</code> tag if present,
-      otherwise <em>floor count × footprint area ÷ 850 sq ft per unit</em>, with a minimum of 4.</li>
-    <li><strong style="color:#cbd5e1">Commercial, industrial, and civic buildings</strong> — excluded.</li>
-    <li><strong style="color:#cbd5e1">Standalone address nodes</strong> not inside any building outline are
-      counted as 1 unit each (fallback for unmapped areas).</li>
+    <li><strong style="color:#7f1d1d">■</strong> <strong style="color:#cbd5e1">0–200 ft</strong> — &gt;64 dB LAFmax, severely bothersome</li>
+    <li><strong style="color:#ef4444">■</strong> <strong style="color:#cbd5e1">200–400 ft</strong> — ~58–64 dB, very bothersome</li>
+    <li><strong style="color:#fb923c">■</strong> <strong style="color:#cbd5e1">400–600 ft</strong> — ~54–58 dB, bothersome</li>
+    <li><strong style="color:#fde047">■</strong> <strong style="color:#cbd5e1">600–800 ft</strong> — ~52–54 dB, noticeable</li>
+    <li><strong style="color:#86efac">■</strong> <strong style="color:#cbd5e1">800–1000 ft</strong> — ~50–52 dB, at threshold</li>
   </ul>
-  <div style="background:#1c1917;border:1px solid #78350f;border-radius:7px;padding:10px 14px;font-size:0.78rem;color:#fcd34d;line-height:1.6">
-    <strong style="color:#fbbf24">Why estimates may be slightly high:</strong>
-    Buildings tagged generically as <code style="background:#0f172a;padding:1px 4px;border-radius:3px">building=yes</code>
-    are assumed residential — some may actually be garages, sheds, or commercial structures
-    that weren't tagged precisely in OSM. Multi-unit estimates also use a generic average
-    unit size. Treat the number as an order-of-magnitude guide rather than a precise count.
+  <div style="background:#0c1a2e;border:1px solid #1e3a5f;border-radius:7px;padding:10px 14px;font-size:0.78rem;color:#93c5fd;line-height:1.6">
+    <strong style="color:#60a5fa">Note:</strong> These are <em>peak</em> noise events (LAFmax), not average levels.
+    Real-world levels vary with wind, terrain, and court activity. Overlapping zones from nearby courts
+    appear darker on the map to indicate cumulative potential exposure.
   </div>
 </div>
 

@@ -359,6 +359,52 @@
     dbTooltip.style.display = 'none';
   });
 
+  // Floating tooltip explaining the dwelling unit estimation methodology
+  const dwTooltip = document.createElement('div');
+  dwTooltip.style.cssText = [
+    'position:fixed',
+    'display:none',
+    'background:#1e293b',
+    'color:#94a3b8',
+    'padding:12px 14px',
+    'border-radius:7px',
+    'font-size:0.73rem',
+    'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    'pointer-events:none',
+    'z-index:9999',
+    'border:1px solid #475569',
+    'max-width:320px',
+    'line-height:1.5',
+    'box-shadow:0 4px 16px rgba(0,0,0,0.5)',
+  ].join(';');
+  dwTooltip.innerHTML = [
+    '<strong style="color:#e2e8f0;display:block;margin-bottom:6px">How dwelling units are estimated</strong>',
+    '<ul style="margin:0 0 8px 0;padding-left:16px;line-height:1.8">',
+    '<li><b style="color:#cbd5e1">Single-family</b> (house, detached, bungalow, or untagged <code style="background:#0f172a;padding:1px 3px;border-radius:3px">building=yes</code>) — 1 unit</li>',
+    '<li><b style="color:#cbd5e1">Semi-detached</b> — 2 units</li>',
+    '<li><b style="color:#cbd5e1">Apartments / multi-unit</b> — <code style="background:#0f172a;padding:1px 3px;border-radius:3px">building:units</code> tag if set, otherwise floors × footprint ÷ 850 sq ft (min 4)</li>',
+    '<li><b style="color:#cbd5e1">Commercial, industrial, civic</b> — excluded</li>',
+    '<li><b style="color:#cbd5e1">Unmapped areas</b> — standalone address nodes outside building outlines counted as 1 each</li>',
+    '</ul>',
+    '<div style="color:#fcd34d;font-size:0.72rem;border-top:1px solid #334155;padding-top:7px">',
+    'Estimates may run slightly high — untagged <code style="background:#0f172a;padding:1px 3px;border-radius:3px">building=yes</code> entries sometimes include garages or sheds. Treat as order-of-magnitude.',
+    '</div>',
+  ].join('');
+  document.body.appendChild(dwTooltip);
+
+  document.addEventListener('mouseover', (e) => {
+    if (e.target.closest('.dw-est')) dwTooltip.style.display = 'block';
+  });
+  document.addEventListener('mouseout', (e) => {
+    if (e.target.closest('.dw-est')) dwTooltip.style.display = 'none';
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (dwTooltip.style.display === 'block') {
+      dwTooltip.style.left = (e.clientX + 16) + 'px';
+      dwTooltip.style.top  = (e.clientY - 12) + 'px';
+    }
+  });
+
   const satToggle  = document.getElementById('sat-toggle');
   const satControl = document.getElementById('sat-control');
   satToggle.addEventListener('change', () => {
@@ -682,7 +728,7 @@ out skel qt;`.trim();
         const el = document.getElementById(householdId);
         if (el) {
           el.className = 'popup-detail';
-          el.innerHTML = `~${count.toLocaleString()} dwelling units within impact zone <span style="color:#475569">(est.)</span>`;
+          el.innerHTML = `~${count.toLocaleString()} dwelling units within impact zone <span class="dw-est" style="color:#475569;cursor:help;border-bottom:1px dotted #475569">(est.)</span>`;
         }
       }).catch(() => {
         const el = document.getElementById(householdId);
@@ -846,7 +892,7 @@ out skel qt;
           const el = document.getElementById(selectedHouseholdId);
           if (el) {
             el.className = 'popup-detail';
-            el.innerHTML = `~${count.toLocaleString()} dwelling units within impact zone <span style="color:#475569">(est.)</span>`;
+            el.innerHTML = `~${count.toLocaleString()} dwelling units within impact zone <span class="dw-est" style="color:#475569;cursor:help;border-bottom:1px dotted #475569">(est.)</span>`;
           }
         })
         .catch(() => {
