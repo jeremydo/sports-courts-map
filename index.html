@@ -510,6 +510,27 @@
 
   const FEET_TO_METERS = 0.3048;
   let circleRadiusFt = 1000;
+
+  const OVERPASS_MIRRORS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.openstreetmap.ru/api/interpreter',
+  ];
+
+  async function overpassFetch(query) {
+    let lastErr;
+    for (const base of OVERPASS_MIRRORS) {
+      try {
+        const text = await fetch(base + '?data=' + encodeURIComponent(query))
+          .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); });
+        if (text.trimStart().startsWith('<')) throw new Error('Overpass busy');
+        return JSON.parse(text);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error('All Overpass mirrors failed');
+  }
   let minCourtSizeFt = 1000;
   // { layer, rings[], lat, lon, type, areaSqFt } — used for filtering and ring rebuilds
   const allCourts = [];
@@ -651,11 +672,7 @@ out body;
 >;
 out skel qt;`.trim();
 
-    const text = await fetch(
-      'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query)
-    ).then(r => r.text());
-    if (text.trimStart().startsWith('<')) throw new Error('Overpass busy');
-    const data = JSON.parse(text);
+    const data = await overpassFetch(query);
 
     const nodeCoords  = {};
     const addrNodes   = []; // standalone address nodes [lat,lon]
@@ -847,20 +864,7 @@ out body;
 out skel qt;
     `.trim();
 
-    const fetchWithRetry = (url, retriesLeft = 3, delay = 2000) =>
-      fetch(url)
-        .then(r => r.text())
-        .then(text => {
-          if (text.trimStart().startsWith('<')) {
-            if (retriesLeft === 0) throw new Error('Overpass API unavailable — try again in a moment');
-            statusEl.textContent = `Server busy, retrying… (${retriesLeft} attempt${retriesLeft > 1 ? 's' : ''} left)`;
-            return new Promise(res => setTimeout(res, delay))
-              .then(() => fetchWithRetry(url, retriesLeft - 1, delay * 1.5));
-          }
-          return JSON.parse(text);
-        });
-
-    fetchWithRetry('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(overpassQuery))
+    overpassFetch(overpassQuery)
     .then(data => {
       const nodes = {};
       data.elements.forEach(el => {
